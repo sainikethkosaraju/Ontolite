@@ -121,6 +121,7 @@ def cmd_audit_verify(a: argparse.Namespace) -> int:
         if not heads or not a.pubkey:
             print("--pinned needs a non-empty checkpoint file and --pubkey", file=sys.stderr)
             return 2
+        msg = ""
         for h in heads:    # every pinned head must still be a prefix of the log
             ok, msg = verify_against_head(entries, h, _load_public(a.pubkey))
             if not ok:

@@ -99,7 +99,7 @@ def test_cli_authz_audit_transparency_tokens_and_migration(tmp_path, capsys):
     key = str(tmp_path / "audit.key")
     assert main(["audit", "keygen", "--out", key]) == 0
     rt = _open(d, key=key)
-    for i in range(5):
+    for _ in range(5):
         rt.retriever.search("alice", "Company")
     heads = str(tmp_path / "heads.jsonl")
     assert main(["audit", "checkpoint", "--dir", d, "--key", key, "--out", heads]) == 0
