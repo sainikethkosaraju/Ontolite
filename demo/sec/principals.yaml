@@ -1,0 +1,20 @@
+roles:
+  analyst:   {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  reviewer:  {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  approver:  {grants: {Filing: [read]}}
+  schema_admin: {grants: {}}
+principals:
+  alice:       {kind: user, roles: [analyst]}
+  rita:        {kind: user, roles: [reviewer]}
+  lena:        {kind: user, roles: [approver]}
+  sam:         {kind: user, roles: [schema_admin]}
+  agent-alice: {kind: agent, acts_for: alice, roles: [analyst]}
+  agent-rita:  {kind: agent, acts_for: rita}
+  orphan-agent: {kind: agent}            # no acts_for: gets nothing
+relationships:                            # [subject, relation, object]
+  - [alice, viewer, "Company:0000320193"]
+  - [alice, viewer, "Company:0000789019"]
+  - [rita, member, "group:reviewers"]
+  - ["group:reviewers", viewer, "Company:0000320193"]
+  - ["group:reviewers", viewer, "Company:0000789019"]
+  - ["group:reviewers", viewer, "Company:0000999999"]

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ontolite"
+version = "0.1.0"
+description = "A small governed-data layer: typed objects, staged actions, property-level permissions, hash-chained audit, MCP server."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["pyyaml>=6,<7", "mcp>=2,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.6", "pyright>=1.1.380"]
+
+[project.scripts]
+ontolite = "ontolite.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ontolite"]
+
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E701", "E702", "E501", "B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+reportMissingModuleSource = false

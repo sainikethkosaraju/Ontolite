@@ -1,0 +1,64 @@
+objects:
+  Company:
+    primary_key: cik
+    access: relationship          # needs a relationship tuple: not every analyst sees every company
+    properties:
+      cik: {type: string}
+      name: {type: string}
+      sic: {type: string}
+      risk_rating: {type: string, visibility: [reviewer]}
+  Filing:
+    primary_key: adsh
+    access: inherit               # a filing is visible only if its company is
+    inherit_via: filings
+    properties:
+      adsh: {type: string}
+      form: {type: string}
+      period: {type: date}
+      filed: {type: date}
+      fy: {type: integer}
+      internal_notes: {type: string, visibility: [reviewer]}
+      review_status: {type: string}
+      review_reason: {type: string}
+      signoff_status: {type: string}
+  Concept:
+    primary_key: tag
+    properties:
+      tag: {type: string}
+      tlabel: {type: string}
+      datatype: {type: string}
+  Fact:
+    primary_key: id
+    access: inherit
+    inherit_via: facts
+    properties:
+      id: {type: string}
+      adsh: {type: string}
+      tag: {type: string}
+      ddate: {type: date}
+      value: {type: number}
+      uom: {type: string}
+links:
+  filings: {from: Company, to: Filing, inverse: company, cardinality: one_to_many}
+  facts: {from: Filing, to: Fact, inverse: filing, cardinality: one_to_many}
+  concept: {from: Fact, to: Concept, inverse: facts_of_concept, cardinality: many_to_many}
+actions:
+  flag_for_review:
+    target: Filing
+    description: Flag a filing for human review.
+    parameters: {adsh: string, reason: string}
+    roles: [analyst, reviewer]
+    edit_set: [Filing]
+    preconditions: [{property: signoff_status, not_equals: signed_off}]
+    edits:
+      - {type: Filing, key_param: adsh, set: {review_status: flagged, review_reason: $reason}}
+  request_signoff:
+    target: Filing
+    description: Reviewer requests sign-off; a lead must approve before it applies.
+    parameters: {adsh: string}
+    roles: [reviewer]
+    approver_roles: [approver]
+    edit_set: [Filing]
+    preconditions: [{property: review_status, equals: flagged}]
+    edits:
+      - {type: Filing, key_param: adsh, set: {signoff_status: signed_off}}

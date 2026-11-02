@@ -1,0 +1,28 @@
+name: demo-data
+# Downloads the SEC Financial Statement Data Sets (public domain) and builds the demo store.
+on: { workflow_dispatch: {} }
+env:
+  SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}   # e.g. "Your Name you@example.com"; SEC requires one
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .
+      - uses: actions/cache@v4
+        with: { path: sec-data, key: sec-fsds-${{ github.run_id }}, restore-keys: sec-fsds- }
+      - name: Download the latest available quarter (tries newest first)
+        run: |
+          test -n "$SEC_USER_AGENT" || { echo "set SEC_USER_AGENT secret"; exit 1; }
+          mkdir -p sec-data && cd sec-data
+          for y in 2026 2025; do for q in 4 3 2 1; do
+            u="https://www.sec.gov/files/dera/data/financial-statement-data-sets/${y}q${q}.zip"
+            if curl -fsSL -A "$SEC_USER_AGENT" -o fsds.zip "$u"; then echo "got ${y}q${q}"; unzip -oq fsds.zip; break 2; fi
+          done; done
+          test -f sub.txt || { echo "no quarter downloaded"; exit 1; }
+      - run: |
+          ontolite init --dir .ontolite
+          cp sec-data/sub.txt sec-data/num.txt sec-data/tag.txt .ontolite/data/
+          ontolite ingest --dir .ontolite
