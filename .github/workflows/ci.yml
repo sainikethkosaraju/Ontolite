@@ -1,0 +1,23 @@
+name: ci
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy: { matrix: { python: ["3.11", "3.12", "3.13"] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - run: pip install -e ".[dev]"
+      - run: ruff check . && pyright
+      - run: pytest -q --cov=ontolite --cov-report=term
+      - name: Benchmark report is current
+        run: python bench/report.py && git diff --exit-code docs/bench.md
+  spike:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[duckdb]" && python bench/store_spike.py 2000 10 15

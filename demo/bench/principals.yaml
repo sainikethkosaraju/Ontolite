@@ -1,0 +1,27 @@
+roles:
+  analyst:   {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  reviewer:  {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  approver:  {grants: {Filing: [read]}}
+principals:
+  alice:       {kind: user, roles: [analyst]}
+  walter:      {kind: user, roles: [analyst]}
+  rita:        {kind: user, roles: [reviewer]}
+  lena:        {kind: user, roles: [approver]}
+  agent-alice: {kind: agent, acts_for: alice, roles: [analyst]}
+  agent-walter: {kind: agent, acts_for: walter, roles: [analyst]}
+  agent-rita:  {kind: agent, acts_for: rita}
+tuples:
+  - ["company:0000100001", viewer, "user:alice"]
+  - ["company:0000100002", viewer, "user:alice"]
+  - ["company:0000100003", viewer, "user:alice"]
+  - ["company:0000100001", viewer, "user:walter"]
+  - ["company:0000100002", viewer, "user:walter"]
+  - ["company:0000100003", viewer, "user:walter"]
+  - ["company:0000100002", walled, "user:walter"]
+  - ["group:reviewers", member, "user:rita"]
+  - ["company:0000100001", reviewer, "group:reviewers#member"]
+  - ["company:0000100002", reviewer, "group:reviewers#member"]
+  - ["company:0000100003", reviewer, "group:reviewers#member"]
+  - ["company:0000100004", reviewer, "group:reviewers#member"]
+  - ["company:0000100005", reviewer, "group:reviewers#member"]
+  - ["company:0000999999", reviewer, "group:reviewers#member"]

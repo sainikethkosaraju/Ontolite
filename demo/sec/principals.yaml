@@ -1,0 +1,24 @@
+roles:
+  analyst:   {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  reviewer:  {grants: {Company: [read], Filing: [read], Concept: [read], Fact: [read]}}
+  approver:  {grants: {Filing: [read]}}
+  schema_admin: {grants: {}}
+principals:
+  alice:       {kind: user, roles: [analyst]}
+  walter:      {kind: user, roles: [analyst]}        # analyst behind a compliance wall
+  rita:        {kind: user, roles: [reviewer]}
+  lena:        {kind: user, roles: [approver]}
+  sam:         {kind: user, roles: [schema_admin]}
+  agent-alice: {kind: agent, acts_for: alice, roles: [analyst]}
+  agent-rita:  {kind: agent, acts_for: rita}
+  orphan-agent: {kind: agent}                        # no acts_for: gets nothing
+tuples:                                              # [object, relation, subject]
+  - ["company:0000320193", viewer, "user:alice"]
+  - ["company:0000789019", viewer, "user:alice"]
+  - ["company:0000320193", viewer, "user:walter"]
+  - ["company:0000789019", viewer, "user:walter"]
+  - ["company:0000789019", walled, "user:walter"]    # walter may not see company 0000789019
+  - ["group:reviewers", member, "user:rita"]
+  - ["company:0000320193", reviewer, "group:reviewers#member"]
+  - ["company:0000789019", reviewer, "group:reviewers#member"]
+  - ["company:0000999999", reviewer, "group:reviewers#member"]

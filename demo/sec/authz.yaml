@@ -1,0 +1,21 @@
+# Relation rewrites (Zanzibar-style). Object-level read of Company/Filing/Fact is decided here.
+namespaces:
+  group:
+    relations:
+      member: this
+  company:
+    relations:
+      walled: this                         # compliance wall: explicit exclusion
+      reviewer: this
+      viewer:
+        exclusion:
+          base: {union: [this, {computed: reviewer}]}
+          subtract: {computed: walled}
+  filing:
+    relations:
+      company: {link: {name: filings, inverse: true, target: company}}   # derived from the data graph
+      viewer: {ttu: [company, viewer]}
+  fact:
+    relations:
+      filing: {link: {name: facts, inverse: true, target: filing}}
+      viewer: {ttu: [filing, viewer]}
