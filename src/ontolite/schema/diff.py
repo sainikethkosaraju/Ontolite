@@ -26,7 +26,7 @@ class SchemaDiff:
 def diff_schemas(old: Schema, new: Schema) -> SchemaDiff:
     d = SchemaDiff()
     a, b = old.to_dict(), new.to_dict()
-    for kind in ("objects", "links", "actions"):
+    for kind in ("objects", "links", "actions", "queries"):
         for n in sorted(set(b[kind]) - set(a[kind])):
             d.added.append(f"{kind[:-1]} {n}")
         for n in sorted(set(a[kind]) - set(b[kind])):

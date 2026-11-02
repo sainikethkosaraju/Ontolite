@@ -9,8 +9,10 @@ import pytest
 
 from ontolite.retrieval import AccessDenied
 
-LEAKS = ["SENTINEL", "SECRETCO", "0000999999", "777.0", "6770", "Secretco"]
-PRINCIPALS = ["alice", "agent-alice"]
+BASE_LEAKS = ["SENTINEL", "SECRETCO", "0000999999", "777.0", "6770", "Secretco"]
+WALL = ["EXAMPLE SOFT", "0000789019", "7372", "2000.0"]          # walter is walled from this company
+PRINCIPALS = ["alice", "agent-alice", "walter"]
+def leaks_for(p): return BASE_LEAKS + (WALL if p == "walter" else [])
 TYPES = ["Company", "Filing", "Fact", "Concept"]
 LINKS = ["filings", "company", "facts", "filing", "concept", "facts_of_concept"]
 HIDDEN_VALUES = ["SENTINEL-RISK-RED", "SENTINEL-RISK-AMBER", "SENTINEL-RISK-GREEN",
@@ -45,12 +47,18 @@ def _probes():
             for t in ("Fact", "Company", "Filing"):
                 yield (p, "query", t, {"op": op, "prop": prop})
         yield (p, "query", "Fact", {"op": "count", "filters": {"adsh": "0000999999-26-000003"}})
+        for q, prm in [("revenue_by_filing", {"tag": "Revenues"}), ("revenue_by_filing", {"tag": "NetIncomeLoss"}),
+                       ("average_by_tag", {"tag": "Revenues"}), ("companies_by_risk", {}),
+                       ("companies_by_risk", {"x": 1}), ("no_such_query", {})]:
+            yield (p, "run_query", q, {"params": prm})
 
 
 def _run(rt, probe):
     p, kind, t, kw = probe
     r = rt.retriever
     try:
+        if kind == "run_query":
+            return r.run_query(p, t, kw.get("params"))
         if kind == "search":
             return r.search(p, t, **kw)
         if kind == "get":
@@ -62,13 +70,13 @@ def _run(rt, probe):
         return {"denied": str(e)}
 
 
-def test_at_least_200_probes_zero_leaks(rt):
+def test_at_least_200_probes_zero_leaks_on_every_backend(rt_any):
     probes = list(_probes())
     assert len(probes) >= 200
     leaks = []
     for pr in probes:
-        out = json.dumps(_run(rt, pr), default=str)
-        leaks += [(pr, s) for s in LEAKS if s in out]
+        out = json.dumps(_run(rt_any, pr), default=str)
+        leaks += [(pr, s) for s in leaks_for(pr[0]) if s in out]
     assert leaks == [], leaks[:5]
 
 
@@ -76,6 +84,7 @@ def test_suite_is_not_vacuous(rt):
     """Control: the reviewer can see the values, so the sentinels exist and the probes bite."""
     out = json.dumps(rt.retriever.search("rita", "Company"))
     assert "SENTINEL-RISK-RED" in out and "SECRETCO" in out
+    assert "EXAMPLE SOFT" in json.dumps(rt.retriever.search("alice", "Company"))   # alice may see what walter may not
     assert "SENTINEL-NOTE-CHARLIE" in json.dumps(rt.retriever.search("rita", "Filing"))
     assert any("SENTINEL" in json.dumps(_run(rt, ("rita", "search", "Company", {"text": q})))
                for q in ("RED",))

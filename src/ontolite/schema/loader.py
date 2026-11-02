@@ -13,6 +13,7 @@ from ontolite.schema.models import (
     LinkType,
     ObjectType,
     Property,
+    QueryType,
     Schema,
 )
 
@@ -30,7 +31,7 @@ def _req(d: dict, key: str, where: str) -> Any:
 def parse_schema(data: Any) -> Schema:
     if not isinstance(data, dict):
         raise SchemaError("schema must be a mapping")
-    unknown = set(data) - {"objects", "links", "actions"}
+    unknown = set(data) - {"objects", "links", "actions", "queries"}
     if unknown:
         raise SchemaError(f"unknown top-level keys: {sorted(unknown)}")
     s = Schema()
@@ -48,16 +49,13 @@ def parse_schema(data: Any) -> Schema:
             vis = pd.get("visibility")
             if vis is not None and (not isinstance(vis, list) or not vis):
                 raise SchemaError(f"{where}.{pname}: visibility must be a non-empty list of roles")
-            props[pname] = Property(pname, ptype, tuple(vis) if vis else None)
+            props[pname] = Property(pname, ptype, tuple(vis) if vis else None, pd.get("default"))
         if pk not in props:
             raise SchemaError(f"{where}: primary_key '{pk}' is not a declared property")
         access = od.get("access", "open")
-        if access not in {"open", "relationship", "inherit"}:
-            raise SchemaError(f"{where}: access must be 'open', 'relationship' or 'inherit'")
-        via = od.get("inherit_via")
-        if (access == "inherit") != (via is not None):
-            raise SchemaError(f"{where}: inherit_via is required for (and only for) access: inherit")
-        s.objects[name] = ObjectType(name, pk, props, access, via)
+        if access not in {"open", "authz"}:
+            raise SchemaError(f"{where}: access must be 'open' or 'authz'")
+        s.objects[name] = ObjectType(name, pk, props, access, od.get("namespace"), od.get("relation", "viewer"))
     for name, ld in (data.get("links") or {}).items():
         where = f"link {name}"
         lt = LinkType(name, _req(ld, "from", where), _req(ld, "to", where),
@@ -68,11 +66,6 @@ def parse_schema(data: Any) -> Schema:
         if lt.cardinality not in {"one_to_one", "one_to_many", "many_to_many"}:
             raise SchemaError(f"{where}: bad cardinality '{lt.cardinality}'")
         s.links[name] = lt
-    for o in s.objects.values():
-        if o.access == "inherit":
-            lt = s.links.get(o.inherit_via or "")
-            if lt is None or lt.to_type != o.name:
-                raise SchemaError(f"object {o.name}: inherit_via must name a link ending at {o.name}")
     for name, ad in (data.get("actions") or {}).items():
         where = f"action {name}"
         target = _req(ad, "target", where)
@@ -103,6 +96,42 @@ def parse_schema(data: Any) -> Schema:
             name, target, params, roles, edit_set, edits,
             tuple(ad.get("preconditions", [])), tuple(ad.get("approver_roles", [])),
             ad.get("description", ""))
+    for name, qd in (data.get("queries") or {}).items():
+        where = f"query {name}"
+        ot = s.objects.get(_req(qd, "object", where))
+        if ot is None:
+            raise SchemaError(f"{where}: unknown object type '{qd['object']}'")
+        params = dict(qd.get("params") or {})
+        for p, t in params.items():
+            if t not in VALUE_TYPES:
+                raise SchemaError(f"{where}: parameter '{p}' has unknown type '{t}'")
+        for w in qd.get("where") or []:
+            if w.get("property") not in ot.properties:
+                raise SchemaError(f"{where}: where uses unknown property '{w.get('property')}'")
+            if w.get("op", "eq") not in {"eq", "ne", "gt", "ge", "lt", "le", "in"}:
+                raise SchemaError(f"{where}: bad operator '{w.get('op')}'")
+            if ("param" in w) == ("value" in w):
+                raise SchemaError(f"{where}: where needs exactly one of 'param' or 'value'")
+            if "param" in w and w["param"] not in params:
+                raise SchemaError(f"{where}: where references undeclared parameter '{w['param']}'")
+        for g in qd.get("group_by") or []:
+            if g not in ot.properties:
+                raise SchemaError(f"{where}: group_by unknown property '{g}'")
+        agg = qd.get("aggregate")
+        if agg is not None:
+            if agg.get("op") not in {"count", "sum", "avg", "min", "max"}:
+                raise SchemaError(f"{where}: bad aggregate op '{agg.get('op')}'")
+            if agg["op"] != "count" and ot.properties.get(agg.get("property", ""), Property("", "string")).type \
+                    not in {"integer", "number"}:
+                raise SchemaError(f"{where}: {agg['op']} needs a numeric property")
+        elif qd.get("group_by"):
+            raise SchemaError(f"{where}: group_by requires an aggregate")
+        mgs = int(qd.get("min_group_size", 1))
+        if agg is not None and mgs < 1:
+            raise SchemaError(f"{where}: min_group_size must be >= 1")
+        s.queries[name] = QueryType(name, ot.name, params, tuple(qd.get("where") or ()),
+                                    tuple(qd.get("group_by") or ()), agg, mgs,
+                                    int(qd.get("limit", 100)), qd.get("description", ""))
     return s
 
 

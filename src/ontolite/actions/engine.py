@@ -23,7 +23,7 @@ from ontolite.audit.log import digest
 from ontolite.permissions.checks import Checker, Effective
 from ontolite.permissions.rebac import PermissionUnavailable
 from ontolite.schema.models import Schema
-from ontolite.store import SQLiteStore
+from ontolite.store import SQLStore
 
 DEFAULT_TTL = 900.0
 BAD_HANDLE = "invalid or expired handle"
@@ -52,7 +52,7 @@ def _h(handle: str) -> str:
 
 
 class ActionEngine:
-    def __init__(self, schema: Schema, store: SQLiteStore, checker: Checker, audit: AuditLog,
+    def __init__(self, schema: Schema, store: SQLStore, checker: Checker, audit: AuditLog,
                  clock: Callable[[], float] = time.time, ttl: float = DEFAULT_TTL) -> None:
         self.schema, self.store, self.checker, self.audit = schema, store, checker, audit
         self.clock, self.ttl = clock, ttl

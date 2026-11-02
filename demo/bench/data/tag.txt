@@ -1,0 +1,5 @@
+tag	tlabel	datatype
+Revenues	Revenues	monetary
+NetIncomeLoss	Net Income (Loss)	monetary
+Assets	Assets	monetary
+Liabilities	Liabilities	monetary

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ontolite.ingest.mappings import TableMapping
 from ontolite.schema.models import Schema
-from ontolite.store import SQLiteStore
+from ontolite.store import SQLStore
 
 csv.field_size_limit(10_000_000)
 
@@ -24,7 +24,7 @@ def _coerce(v: str, t: str):
     return v
 
 
-def load_table(schema: Schema, store: SQLiteStore, m: TableMapping, base: Path,
+def load_table(schema: Schema, store: SQLStore, m: TableMapping, base: Path,
                delimiter: str | None = None, limit: int | None = None) -> int:
     path = base / m.file
     delim = delimiter or ("\t" if path.suffix in {".tsv", ".txt"} else ",")

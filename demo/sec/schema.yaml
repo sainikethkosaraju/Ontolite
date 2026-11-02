@@ -1,7 +1,7 @@
 objects:
   Company:
     primary_key: cik
-    access: relationship          # needs a relationship tuple: not every analyst sees every company
+    access: authz                 # object-level: the relation engine decides who sees which company
     properties:
       cik: {type: string}
       name: {type: string}
@@ -9,8 +9,7 @@ objects:
       risk_rating: {type: string, visibility: [reviewer]}
   Filing:
     primary_key: adsh
-    access: inherit               # a filing is visible only if its company is
-    inherit_via: filings
+    access: authz                 # inherited from the company through the data link (see authz.yaml)
     properties:
       adsh: {type: string}
       form: {type: string}
@@ -29,8 +28,7 @@ objects:
       datatype: {type: string}
   Fact:
     primary_key: id
-    access: inherit
-    inherit_via: facts
+    access: authz
     properties:
       id: {type: string}
       adsh: {type: string}
@@ -62,3 +60,23 @@ actions:
     preconditions: [{property: review_status, equals: flagged}]
     edits:
       - {type: Filing, key_param: adsh, set: {signoff_status: signed_off}}
+queries:
+  revenue_by_filing:
+    object: Fact
+    description: Sum of one tag per filing.
+    params: {tag: string}
+    where: [{property: tag, param: tag}]
+    group_by: [adsh]
+    aggregate: {op: sum, property: value}
+  average_by_tag:
+    object: Fact
+    description: Whole-population average; suppressed when fewer than 2 visible facts match.
+    params: {tag: string}
+    where: [{property: tag, param: tag}]
+    aggregate: {op: avg, property: value}
+    min_group_size: 2
+  companies_by_risk:
+    object: Company
+    description: Counts per risk rating. Touches a reviewer-only property.
+    group_by: [risk_rating]
+    aggregate: {op: count}

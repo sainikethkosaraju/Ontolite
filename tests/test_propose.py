@@ -1,12 +1,20 @@
 import pytest
+import yaml
 
 from ontolite.propose import ApprovalGate, MockModel, NotApproved, propose_schema_change
 from ontolite.schema import SchemaError
 
-GOOD = """
-objects:
-  Note: {primary_key: id, properties: {id: {type: string}, body: {type: string}}}
-"""
+from .conftest import DEMO
+
+
+def with_note(extra=None):
+    d = yaml.safe_load((DEMO / "schema.yaml").read_text())
+    d["objects"]["Note"] = {"primary_key": "id", "properties": {"id": {"type": "string"}, "body": {"type": "string"}}}
+    d.update(extra or {})
+    return yaml.safe_dump(d)
+
+
+GOOD = with_note()
 
 
 def test_proposal_never_applied_without_approval(rt):
@@ -26,6 +34,7 @@ def test_proposal_never_applied_without_approval(rt):
 
 @pytest.mark.parametrize("hostile", [
     "approved: true\n" + GOOD,
+    "renames: {a: 1}\n" + GOOD,
     "!!python/object/apply:os.system ['echo pwned']",
     "objects: {A: {primary_key: id, properties: {id: {}}}}\nstatus: approved",
     "{{{{ not yaml",

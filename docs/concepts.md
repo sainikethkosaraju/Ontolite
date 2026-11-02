@@ -1,11 +1,12 @@
-# Concepts and the Palantir-inspired mapping
-Ontolite is **inspired by public concepts**; it claims no compatibility with or endorsement by Palantir.
-| Concept here | Public idea it echoes |
+# Concepts and how they relate to public ideas
+Ontolite is **inspired by publicly documented concepts**; it claims no compatibility with, or endorsement by, any vendor.
+| Here | Public idea it echoes |
 | --- | --- |
-| ObjectType / property / primary key | typed objects |
-| LinkType (both directions, cardinality) | link types |
-| ActionType + ChangeSet (propose -> approve -> apply) | action types / staged edits |
-| `edit_set` | declared scope of an action's side effects |
-| property `visibility`, `access: relationship|inherit` | property- and object-level security |
-| Principal acts-for | delegated agent identity |
+| ObjectType, property, primary key, LinkType (both directions) | typed objects and link types in an ontology |
+| ActionType + ChangeSet (propose -> approve -> apply, declared `edit_set`, preconditions) | action types / staged edits |
+| QueryType (typed params, permission-aware, small-cell suppression) | declarative query types |
+| `authz.yaml` relation rewrites (`this`, `computed`, `ttu`, union, intersection, exclusion) | Zanzibar-style relation-based access control (Pang et al., 2019) |
+| property `visibility` (roles) + object-level relations | property- and object-level security |
+| Merkle audit with signed heads and consistency proofs | transparency logs (RFC 6962 / 9162) |
+| Schema proposals + migrations behind a human gate | governed schema evolution |
 Out of scope: UI, multi-tenancy, streaming, interfaces.

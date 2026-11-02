@@ -9,6 +9,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from ontolite.audit.merkle import MerkleTree, SignedTreeHead, sign_head
+
 GENESIS = "0" * 64
 
 
@@ -22,12 +24,16 @@ def entry_hash(entry: dict[str, Any]) -> str:
 
 
 class AuditLog:
-    def __init__(self, path: str | Path | None = None) -> None:
+    def __init__(self, path: str | Path | None = None, signing_key: Any = None) -> None:
         self.path = Path(path) if path else None
+        self.key = signing_key  # Ed25519PrivateKey used to sign tree heads (optional)
         self.entries: list[dict[str, Any]] = []
+        self.tree = MerkleTree()
         self._lock = threading.Lock()
         if self.path and self.path.exists():
             self.entries = [json.loads(x) for x in self.path.read_text().splitlines() if x.strip()]
+            for e in self.entries:
+                self.tree.append(e["hash"].encode())
 
     def append(self, principal: str, action: str, decision: str, params: Any = None,
                before: Any = None, after: Any = None) -> dict[str, Any]:
@@ -40,7 +46,21 @@ class AuditLog:
             }
             e["hash"] = entry_hash(e)
             self.entries.append(e)
+            self.tree.append(e["hash"].encode())
             if self.path:
                 with self.path.open("a") as f:
                     f.write(json.dumps(e, sort_keys=True) + "\n")
             return e
+
+    # ---- transparency-log features -------------------------------------------------
+    def checkpoint(self, path: str | Path | None = None) -> SignedTreeHead:
+        """Sign the current tree head; optionally append it to a checkpoint file. Publish or pin
+        checkpoints OUTSIDE the machine that holds the log: that is what makes truncation and
+        rewrites detectable."""
+        if self.key is None:
+            raise RuntimeError("no signing key configured")
+        sth = sign_head(self.tree, self.key)
+        if path:
+            with Path(path).open("a") as f:
+                f.write(sth.to_json() + "\n")
+        return sth
