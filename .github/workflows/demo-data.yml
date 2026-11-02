@@ -12,7 +12,10 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -e .
       - uses: actions/cache@v4
-        with: { path: sec-data, key: sec-fsds-${{ github.run_id }}, restore-keys: sec-fsds- }
+        with:
+          path: sec-data
+          key: sec-fsds-${{ github.run_id }}
+          restore-keys: sec-fsds-
       - name: Download the latest available quarter (tries newest first)
         run: |
           test -n "$SEC_USER_AGENT" || { echo "set SEC_USER_AGENT secret"; exit 1; }
