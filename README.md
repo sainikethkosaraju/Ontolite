@@ -3,7 +3,7 @@
 <p align="center"><b>A governed data layer for AI agents, served over MCP.</b><br>Typed objects, staged and approved actions, and answers filtered by <i>who is asking</i>, enforced inside the query.</p>
 
 <p align="center">
-  <a href="https://github.com/sainikethkosaraju/ontolite/actions/workflows/ci.yml"><img src="https://github.com/sainikethkosaraju/ontolite/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/sainikethkosaraju/Ontolite/actions/workflows/ci.yml"><img src="https://github.com/sainikethkosaraju/Ontolite/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
 </p>
@@ -59,7 +59,7 @@ ontolite token issue alice            # prints the bearer token once; only its S
 ontolite serve --transport http --port 8000
 ```
 ### Live run on real SEC data
-`demo-data` ran on a real SEC Financial Statement quarter ([run log](https://github.com/sainikethkosaraju/ontolite/actions/runs/41409618248)): 6,516 filings, 140,198 facts. Same question, different principals: alice sees 2 companies / 454 facts (no `risk_rating`), walter 1 / 259, rita 5 / 956 (with `risk_rating`); the audit chain verified.
+`demo-data` ran on a real SEC Financial Statement quarter ([run log](https://github.com/sainikethkosaraju/Ontolite/actions/runs/41409618248)): 6,516 filings, 140,198 facts. Same question, different principals: alice sees 2 companies / 454 facts (no `risk_rating`), walter 1 / 259, rita 5 / 956 (with `risk_rating`); the audit chain verified.
 
 ## Limitations
 Read [docs/threat-model.md](docs/threat-model.md). Highlights: the audit log is only tamper-*evident* against a head you pinned elsewhere; the process owner can read the database; stdio trusts its `--principal`; the HTTP auth is a token issuer, not OIDC; single-process; a remote authorization engine adapter (OpenFGA) is defined but **not implemented**.
@@ -80,6 +80,6 @@ Three independent, MIT-licensed repositories that answer one question: *how do y
 
 | Repo | Role |
 | --- | --- |
-| [**ontolite**](https://github.com/sainikethkosaraju/ontolite) | the governed data layer: typed objects, staged actions, per-principal answers, tamper-evident audit |
-| [**toolpin**](https://github.com/sainikethkosaraju/toolpin) | the trust layer between agent and tools: pinned definitions, information-flow control, approvals bound to the exact call |
-| [**passk**](https://github.com/sainikethkosaraju/passk) | the measurement layer: reliability (pass^k) with honest intervals, cost per success, regression gates |
+| [**Ontolite**](https://github.com/sainikethkosaraju/Ontolite) | the governed data layer: typed objects, staged actions, per-principal answers, tamper-evident audit |
+| [**Toolpin**](https://github.com/sainikethkosaraju/Toolpin) | the trust layer between agent and tools: pinned definitions, information-flow control, approvals bound to the exact call |
+| [**Passk**](https://github.com/sainikethkosaraju/Passk) | the measurement layer: reliability (pass^k) with honest intervals, cost per success, regression gates |
