@@ -52,3 +52,32 @@ def test_row_counts_match_source(rt):
     assert rt.store.count("Fact") == len(rows("num.txt"))
     assert rt.store.count("Concept") == len(rows("tag.txt"))
     assert rt.store.get("Company", "0000320193")["risk_rating"].startswith("SENTINEL")
+
+
+def test_bulk_ingest_filters_tolerates_missing_columns_and_is_fast(tmp_path):
+    """Regression for a real failure: the first live SEC run spent minutes in a per-row get+put loop. 100,000 fact
+    rows must load in batches, honour a tag allow-list, and a `where` on an ABSENT column must not drop rows."""
+    import time
+
+    from ontolite.ingest.csv_loader import load_table
+    from ontolite.ingest.mappings import TableMapping
+    from ontolite.schema import load_schema
+    from ontolite.store import SQLiteStore
+    schema = load_schema(DEMO / "schema.yaml")
+    rows = ["adsh\ttag\tversion\tddate\tqtrs\tuom\tvalue"]
+    tags = ["Revenues", "Noise1", "Assets", "Noise2"]
+    for i in range(100_000):
+        rows.append(f"0000{i % 500:06d}-26-{i % 7:06d}\t{tags[i % 4]}\tv\t2026{i % 12 + 1:02d}01\t{i % 3}\tUSD\t{i}")
+    (tmp_path / "num.txt").write_text("\n".join(rows) + "\n")
+    m = TableMapping("num.txt", "Fact", {"adsh": "adsh", "tag": "tag", "ddate": "ddate", "value": "value", "uom": "uom"},
+                     where={"coreg": ""}, links=[{"link": "facts", "from_col": "adsh", "to_template": "{adsh}|{tag}|{ddate}|{qtrs}"}],
+                     key_template="{adsh}|{tag}|{ddate}|{qtrs}", where_in={"tag": ["Revenues", "Assets"]})
+    store = SQLiteStore()
+    t0 = time.time()
+    n = load_table(schema, store, m, tmp_path)
+    assert n == 50_000 and store.count("Fact") <= 50_000 and store.count("Fact") > 0
+    assert time.time() - t0 < 60
+    assert {r["tag"] for r in store.select("Fact", "id", allowed=None, visible=["id", "tag"],
+                                           types={"tag": "string"}, limit=50)} <= {"Revenues", "Assets"}
+    store2 = SQLiteStore()
+    assert load_table(schema, store2, m, tmp_path, limit=10) == 10          # limit still honoured

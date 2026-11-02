@@ -58,7 +58,7 @@ def cmd_init(a: argparse.Namespace) -> int:
 def cmd_ingest(a: argparse.Namespace) -> int:
     rt = _open(a.dir)
     p = _paths(a.dir)
-    counts = load_sec(rt.schema, rt.store, a.data or Path(a.dir) / "data", p["mappings"])
+    counts = load_sec(rt.schema, rt.store, a.data or Path(a.dir) / "data", p["mappings"], progress=True)
     print(json.dumps(counts, indent=2))
     return 0
 

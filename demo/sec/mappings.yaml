@@ -4,10 +4,15 @@ tables:
     object_type: Filing
     columns: {adsh: adsh, form: form, period: period, filed: filed, fy: fy}
     links: [{link: filings, from_col: cik, to_col: adsh}]
-  - {file: tag.txt, object_type: Concept, columns: {tag: tag, tlabel: tlabel, datatype: datatype}}
+  - file: tag.txt
+    object_type: Concept
+    columns: {tag: tag, tlabel: tlabel, datatype: datatype}
+    where_in: {tag: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, NetIncomeLoss, OperatingIncomeLoss, Assets, Liabilities, StockholdersEquity, EarningsPerShareBasic, CashAndCashEquivalentsAtCarryingValue]}    # keep the concepts the demo uses (the full file has ~80k custom tags)
   - file: num.txt
     object_type: Fact
     key_template: "{adsh}|{tag}|{ddate}|{qtrs}"
+    where: {coreg: ""}                # consolidated figures only (ignored if the file has no coreg column)
+    where_in: {tag: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, NetIncomeLoss, OperatingIncomeLoss, Assets, Liabilities, StockholdersEquity, EarningsPerShareBasic, CashAndCashEquivalentsAtCarryingValue]}
     columns: {adsh: adsh, tag: tag, ddate: ddate, value: value, uom: uom}
     links:
       - {link: facts, from_col: adsh, to_template: "{adsh}|{tag}|{ddate}|{qtrs}"}
