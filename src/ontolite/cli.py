@@ -38,6 +38,7 @@ def cmd_init(a: argparse.Namespace) -> int:
         shutil.copy(DEMO / f, dest / f)
     if (DEMO / "sample").exists():
         shutil.copytree(DEMO / "sample", dest / "data", dirs_exist_ok=True)
+    (dest / "audit.jsonl").touch()
     print(f"initialised demo project in {dest}")
     return 0
 

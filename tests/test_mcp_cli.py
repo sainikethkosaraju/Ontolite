@@ -59,6 +59,7 @@ def test_cli_flow(tmp_path, capsys):
     d = str(tmp_path / "proj")
     assert main(["init", "--dir", d]) == 0
     assert main(["ingest", "--dir", d]) == 0
+    assert main(["audit", "verify", "--dir", d]) == 0  # fresh project verifies
     assert '"sub.txt->Company": 3' in capsys.readouterr().out
     from ontolite.cli import _open
     rt = _open(d)
