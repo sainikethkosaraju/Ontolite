@@ -104,7 +104,7 @@ def test_signed_heads_and_truncation_detection(tmp_path):
     assert forged.entries[-1]["seq"] == 9
     ok, msg = verify_against_head(forged.entries, pinned, key.public_key())
     assert not ok and "rewritten" in msg
-    bad = type(pinned)(pinned.size, pinned.root, pinned.time, pinned.sig[:-2] + "00")
+    bad = type(pinned)(pinned.size, pinned.root, pinned.time, pinned.sig[:-2] + ("ff" if pinned.sig[-2:] == "00" else "00"))
     assert not verify_against_head(log.entries, bad, key.public_key())[0]
     assert sign_head(MerkleTree(), key).size == 0
 
