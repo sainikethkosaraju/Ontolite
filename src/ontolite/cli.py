@@ -92,6 +92,39 @@ def cmd_apply(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_demo_grants(a: argparse.Namespace) -> int:
+    """Grant the demo principals access to companies that actually EXIST in the ingested data, and add clearly
+    synthetic restricted annotations (risk ratings / internal notes) to them, so the demo shows real differences."""
+    import yaml
+    rt = _open(a.dir)
+    rows = rt.store.conn.execute(
+        "SELECT l1.from_pk, COUNT(*) c FROM links l1 JOIN links l2 ON l2.link='facts' AND l2.from_pk=l1.to_pk "
+        "WHERE l1.link='filings' GROUP BY l1.from_pk ORDER BY c DESC, l1.from_pk LIMIT ?", (a.companies,)).fetchall()
+    ciks = [r[0] for r in rows]
+    if len(ciks) < 2:
+        print("need at least 2 companies with filings and facts; ingest first", file=sys.stderr)
+        return 1
+    ratings = ["AMBER", "GREEN", "RED", "BLACK", "AMBER", "GREEN"]
+    for i, cik in enumerate(ciks):
+        co = rt.store.get("Company", cik) or {}
+        rt.store.put("Company", cik, {**co, "risk_rating": f"SENTINEL-RISK-{ratings[i % len(ratings)]}"})
+        for j, adsh in enumerate(rt.store.neighbours("filings", cik)[:20]):
+            f = rt.store.get("Filing", adsh) or {}
+            rt.store.put("Filing", adsh, {**f, "internal_notes": f"SENTINEL-NOTE-{cik[-2:]}-{j + 1}"})
+    path = _paths(a.dir)["principals"]
+    data = yaml.safe_load(path.read_text())
+    first, second = ciks[0], ciks[1]
+    tuples = [[f"company:{c}", "viewer", f"user:{u}"] for u in ("alice", "walter") for c in ciks[:2]]
+    tuples.append([f"company:{second}", "walled", "user:walter"])           # compliance wall
+    tuples.append(["group:reviewers", "member", "user:rita"])
+    tuples += [[f"company:{c}", "reviewer", "group:reviewers#member"] for c in ciks]
+    data["tuples"] = tuples
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    names = {c: (rt.store.get("Company", c) or {}).get("name") for c in ciks}
+    print(json.dumps({"companies": names, "alice_sees": ciks[:2], "walter_sees": [first], "rita_sees": ciks}, indent=1))
+    return 0
+
+
 def cmd_serve(a: argparse.Namespace) -> int:
     from ontolite.mcp_server import build_server
     rt = _open(a.dir, a.backend, a.key)
@@ -199,6 +232,8 @@ def main(argv: list[str] | None = None) -> int:
         if name == "ingest":
             s.add_argument("--data")
         s.set_defaults(fn=fn)
+    s = sub.add_parser("demo-grants"); s.add_argument("--dir", default=STATE)
+    s.add_argument("--companies", type=int, default=5); s.set_defaults(fn=cmd_demo_grants)
     s = sub.add_parser("schema"); ss = s.add_subparsers(dest="sub", required=True)
     d = ss.add_parser("diff"); d.add_argument("old"); d.add_argument("new"); d.set_defaults(fn=cmd_schema_diff)
     s = sub.add_parser("propose"); s.add_argument("--dir", default=STATE)

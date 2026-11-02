@@ -1,5 +1,6 @@
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 from mcp import Client
@@ -127,3 +128,27 @@ def test_cli_authz_audit_transparency_tokens_and_migration(tmp_path, capsys):
     assert main(["migrate", "plan", str(tmp_path / "p" / "schema.yaml"), str(new), "--rename", "Filing.fy=fiscal_year"]) == 0
     assert "rename_property Filing.fiscal_year" in capsys.readouterr().out
     assert main(["migrate", "plan", str(tmp_path / "p" / "schema.yaml"), str(new)]) == 1     # w/o rename: drop+add = destructive
+
+
+def test_demo_grants_derive_access_from_the_data_actually_loaded(tmp_path, capsys):
+    """Regression for the first live SEC run: hard-coded demo company ids were absent from the real quarter, so
+    every principal saw nothing. Grants must come from the ingested data."""
+    import yaml
+    d = str(tmp_path / "p")
+    assert main(["init", "--dir", d]) == 0
+    import shutil
+    shutil.rmtree(tmp_path / "p" / "data")                              # real-data layout: no synthetic annotation files
+    (tmp_path / "p" / "data").mkdir()
+    src = Path(__file__).parent.parent / "demo" / "bench" / "data"
+    for f in ("sub.txt", "num.txt", "tag.txt"):
+        shutil.copy(src / f, tmp_path / "p" / "data" / f)
+    assert main(["ingest", "--dir", d]) == 0                              # optional annotation tables are simply skipped
+    assert main(["demo-grants", "--dir", d, "--companies", "4"]) == 0
+    tuples = yaml.safe_load((tmp_path / "p" / "principals.yaml").read_text())["tuples"]
+    ciks = {t[0].split(":")[1] for t in tuples if t[1] == "viewer" and t[2] == "user:alice"}
+    rt = _open(d)
+    assert ciks and all(rt.store.get("Company", c) for c in ciks)       # every granted company really exists
+    seen = {u: rt.retriever.query(u, "Fact", "count")["value"] for u in ("alice", "walter", "rita")}
+    assert seen["rita"] >= seen["alice"] > seen["walter"] > 0
+    assert "risk_rating" not in rt.retriever.search("alice", "Company")[0]
+    assert "risk_rating" in rt.retriever.search("rita", "Company")[0]

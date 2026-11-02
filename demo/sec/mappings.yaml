@@ -11,11 +11,11 @@ tables:
   - file: num.txt
     object_type: Fact
     key_template: "{adsh}|{tag}|{ddate}|{qtrs}"
-    where: {coreg: ""}                # consolidated figures only (ignored if the file has no coreg column)
+    where: {coreg: "", segments: ""}  # consolidated, undimensioned figures only (columns missing in a file are ignored)
     where_in: {tag: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax, NetIncomeLoss, OperatingIncomeLoss, Assets, Liabilities, StockholdersEquity, EarningsPerShareBasic, CashAndCashEquivalentsAtCarryingValue]}
     columns: {adsh: adsh, tag: tag, ddate: ddate, value: value, uom: uom}
     links:
       - {link: facts, from_col: adsh, to_template: "{adsh}|{tag}|{ddate}|{qtrs}"}
       - {link: concept, to_col: tag}
-  - {file: internal_companies.tsv, object_type: Company, columns: {cik: cik, risk_rating: risk_rating}}
-  - {file: internal_filings.tsv, object_type: Filing, columns: {adsh: adsh, internal_notes: internal_notes}}
+  - {file: internal_companies.tsv, object_type: Company, optional: true, columns: {cik: cik, risk_rating: risk_rating}}
+  - {file: internal_filings.tsv, object_type: Filing, optional: true, columns: {adsh: adsh, internal_notes: internal_notes}}

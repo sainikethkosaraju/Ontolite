@@ -15,6 +15,8 @@ def load_sec(schema: Schema, store: SQLStore, data_dir: str | Path, mappings: st
              limit: int | None = None, progress: bool = False) -> dict[str, int]:
     counts: dict[str, int] = {}
     for m in load_mappings(mappings):
+        if m.optional and not (Path(data_dir) / m.file).exists():
+            continue
         counts[f"{m.file}->{m.object_type}"] = load_table(
             schema, store, m, Path(data_dir), limit=limit, progress=progress)
     return counts

@@ -31,7 +31,9 @@ jobs:
         timeout-minutes: 20
         run: |
           ontolite init --dir .ontolite
+          rm -f .ontolite/data/*   # drop the synthetic sample files; real data only
           cp sec-data/sub.txt sec-data/num.txt sec-data/tag.txt .ontolite/data/
           ontolite ingest --dir .ontolite
+          ontolite demo-grants --dir .ontolite --companies 5
       - name: Sanity check (counts, governed queries, audit chain)
         run: python scripts/demo_check.py .ontolite
